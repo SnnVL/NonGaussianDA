@@ -22,6 +22,10 @@ Colorado State University,
 import numpy as np
 from scipy.integrate import solve_ivp
 
+import sys
+sys.path.append("../DataAssimilation/")
+from mod_DA_general import getBsimple
+
 
 def l63_fun_n(t, SV, s, r, b, cx, cy, cz, n):
     """
@@ -85,3 +89,48 @@ def sol_l63_n(t_span, \
         return None, None 
 
     return sol.t, sol.y
+
+
+
+
+###########################################################################################
+#######################    Data assimilation specific functions     #######################
+###########################################################################################
+
+def create_B_init(n, \
+        SV_init_0 = np.array([-5.0,-5.0,25.0]), \
+        p = np.array([10.0,28.0,8.0/3.0]), \
+        c = np.array([1.0,1.0,1.0]), \
+        meth = 'RK45', \
+        seed = None):
+    """
+    Create the initial guess for the background error covariance matrix for the Lorenz 63 model. 
+
+    #### Optional input
+    - `SV_init` ->  Initial value for all state variables, array of size n_SV
+    - `p`       ->  Parameters of the Lorenz model, [sigma, rho, beta]
+    - `meth`    ->  String indicating the integration method to use
+
+    #### Output
+    - `B`       ->  Background error covariance matrix
+    """
+
+    # Initial values
+    rng = np.random.default_rng(seed)
+    SV_init = np.empty(3*n)
+    for ii in range(n):
+        SV_init[3*ii:3*ii+3] = SV_init_0 + rng.normal(loc = 0.0, scale = 3.0, size = (3))
+
+    # Create time values for evaluation
+    total_steps = 2000
+    dt = 0.01
+    t_span = [0.0,dt*total_steps]
+    t_eval = np.arange(t_span[0],t_span[1],dt)
+
+    # Solve Lorenz model
+    _, SV = sol_l63_n(t_span,SV_init,p,c,n,t_eval,meth)
+
+    # Calculate the background error covariance matrix 
+    B = getBsimple(SV)
+
+    return B
