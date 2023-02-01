@@ -13,7 +13,7 @@ import sys
 sys.path.append("../Models/")
 import mod_L63 as L63
 
-# ML moduls
+# ML modules
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from sklearn.neighbors import KNeighborsClassifier

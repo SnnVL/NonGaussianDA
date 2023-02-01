@@ -48,7 +48,7 @@ def kalman_filter(init_guess, t_obs, n_t_mod, y, H, P_a, R, Q, model, \
     - `R`           ->  Observation error covariance matrix, array of size n_obs x n_obs
     - `Q`           ->  Model error covariance matrix, array of size n_SV x n_SV
     - `model`       ->  Model to use in the analysis, function of the form
-                            x, M = model(t,x_0),
+                            x = model(t,x_0),
                         where t contains the time values where the model is evaluated
                         and x_0 is the initial condition;
                         the output x are the state variables for all time values

@@ -54,7 +54,7 @@ def MLEF(init_guess, t_obs, n_t_mod, n_e, y, h, sqrtP_a_mix, R, model, \
     - `R`           ->  Observation error covariance matrix, array of size n_obs x n_obs
                         This matrix is assumed to be constant throughout the assimilation
     - `model`       ->  Model to use in the analysis, function of the form
-                            x, M = model(t,x_0),
+                            x = model(t,x_0),
                         where t contains the time values where the model is evaluated
                         and x_0 is the initial condition;
                         the output x are the state variables for all time values
