@@ -27,7 +27,7 @@ seed = 42
 rng = np.random.default_rng(seed)
 
 # Initial conditions
-n = 4
+n = 10
 SV_init_0 = np.array([-5.0,-5.0,25.0])
 SV_init = np.empty(3*n)
 for ii in range(n):
@@ -61,15 +61,13 @@ y_data[s <=-1] = -1
 X_data = X_data[50:-50,:]
 y_data = y_data[50:-50]
 
-# Split data: 60% train, 20% cross-validation, 20% test
-X_train, X_test_CV, y_train, y_test_CV = train_test_split(X_data, y_data, test_size=0.4, random_state=42)
-X_CV, X_test, y_CV, y_test = train_test_split(X_test_CV, y_test_CV, test_size=0.5, random_state=42)
+# Split data: 70% train, 30% test
+X_train, X_test, y_train, y_test = train_test_split(X_data, y_data, test_size=0.3, random_state=42)
 
 # Scale data
 scaler = StandardScaler()
 scaler.fit(X_train)  
-X_train = scaler.transform(X_train)  
-X_CV = scaler.transform(X_CV)  
+X_train = scaler.transform(X_train)
 X_test = scaler.transform(X_test)  
 
 # Create and train model
@@ -91,7 +89,8 @@ info = {
     "t_span": t_span,
     "dt": dt,
     "Classifier": "KNeighborsClassifier",
-    "integrationMethod": integrationMethod
+    "integrationMethod": integrationMethod,
+    "accuracy": acc_score
 }
 
 # Save model and scaler to file
