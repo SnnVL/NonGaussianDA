@@ -21,6 +21,7 @@ from sklearn.neighbors import KNeighborsClassifier
 
 # Window for calculating the skewness
 w = 12
+s_cutoff = -stats.norm.ppf(0.1)
 
 # Add random noise to initial conditions
 seed = 42
@@ -54,8 +55,8 @@ s = sp[:,0]
 X_data = np.transpose(SV[:2,:])
 y_data = np.zeros_like(s)
 # 0 when Gaussian, 1 when lognormal, -1 when reverse lognormal
-y_data[s >= 1] =  1 
-y_data[s <=-1] = -1 
+y_data[s >= s_cutoff] =  1 
+y_data[s <=-s_cutoff] = -1 
 
 # Remove data points for spinup
 X_data = X_data[50:-50,:]
@@ -90,7 +91,8 @@ info = {
     "dt": dt,
     "Classifier": "KNeighborsClassifier",
     "integrationMethod": integrationMethod,
-    "accuracy": acc_score
+    "accuracy": acc_score,
+    "s_cutoff":s_cutoff
 }
 
 # Save model and scaler to file

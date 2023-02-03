@@ -20,6 +20,7 @@ from sklearn.neighbors import KNeighborsClassifier
 
 # Window for calculating the skewness
 w = 12
+s_cutoff = -stats.norm.ppf(0.1)
 
 # Generate data
 SV_init = [-3.0,-3.0,20.0]          # Initial conditions
@@ -42,8 +43,8 @@ s = sp[:,0]
 X_data = np.transpose(SV[:2,:])
 y_data = np.zeros_like(s)
 # 0 when Gaussian, 1 when lognormal, -1 when reverse lognormal
-y_data[s >= 1] =  1 
-y_data[s <=-1] = -1 
+y_data[s >= s_cutoff] =  1 
+y_data[s <=-s_cutoff] = -1 
 
 # Remove data points for spinup
 X_data = X_data[50:-50,:]
@@ -76,11 +77,12 @@ info = {
     "dt": dt,
     "Classifier": "KNeighborsClassifier",
     "integrationMethod": integrationMethod,
-    "accuracy": acc_score
+    "accuracy": acc_score,
+    "s_cutoff":s_cutoff
 }
 
 # Save model and scaler to file
-fName = 'kNN_l63_w' + str(w) + '.pkl'
+fName = 'kNN_l63_w' + str(w) + '_s'+str(np.round(s_cutoff,2))+'.pkl'
 with open('./data/'+fName,'wb') as f:
     pickle.dump(clf, f)
     pickle.dump(scaler, f)
