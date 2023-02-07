@@ -166,7 +166,8 @@ def gen_obs(t, SV, period_obs, H, var_obs, ln_vars = [], rl_vars = [], xi_obs = 
     - `rl_vars`         ->  State variables that should be treated reverse lognormally, same as ln_vars
     - `xi_obs`          ->  Parameter for the reverse lognormal distribution
     - `seed`            ->  Seed of the random number generator. Default is random seed
-    - `sample`          ->  Descriptor to sample around, can be either `mode`, `median`, or `mean`. 
+    - `sample`          ->  Descriptor to sample around, can be either 
+                            `mode`, `median`, or `mean`. 
                             Default is `mode`.
 
     #### Output 
@@ -277,15 +278,15 @@ def get_ln_rl_var(ln_vars,rl_vars,n_t,ii,SV):
                         lognormally distributed for each specific time step
     - `rl_vars`   ->  State variables that should be treated reverse lognormally, same as ln_vars
     - `n_t`       ->  Length of time vector to be compared to in the case ln_vars and rl_vars
-                    are a list of indices
+                        are a list of indices
     - `ii`        ->  Index to be used in the case ln_vars and rl_vars are a list of indices
     - `SV`        ->  State variables to be used in the case ln_vars and rl_vars are callable
 
     #### Output
     - `ln_var`    ->  State variables that should be treated lognormally, 
-                    as a list of indices between 0 and n_SV-1
+                        as a list of indices between 0 and n_SV-1
     - `rl_var`    ->  State variables that should be treated reverse lognormally, 
-                    as a list of indices between 0 and n_SV-1
+                        as a list of indices between 0 and n_SV-1
     """
 
     # Get lognormally distributed state variables for this time step
@@ -323,15 +324,15 @@ def transform_vars(x_a, x_b, ln_var, rl_var, xi, ensembles = False):
     #### Input
     - `x_a`       ->  State variables that need to be transformed, array of size n_SV
     - `x_b`       ->  State variables that need to be transformed, either an array of size n_SV
-                    or an array of size n_SV x n_e (if ensembles == True)
+                        or an array of size n_SV x n_e (if ensembles == True)
     - `ln_var`    ->  State variables that should be treated lognormally, 
-                    as a list of indices between 0 and n_SV-1
+                        as a list of indices between 0 and n_SV-1
     - `rl_var`    ->  State variables that should be treated reverse lognormally, 
-                    as a list of indices between 0 and n_SV-1
+                        as a list of indices between 0 and n_SV-1
     - `xi`        ->  Parameter for the reverse lognormal distribution
     - `ensembles` ->  Boolean deciding if x_b contains multiple ensemble members 
-                    If True, x_b is an array of size n_SV x n_e
-                    Default is False
+                        If True, x_b is an array of size n_SV x n_e
+                        Default is False
 
     #### Output
     - `x_a_mix`   ->  Mixed representation of x_a, such that 
@@ -343,13 +344,14 @@ def transform_vars(x_a, x_b, ln_var, rl_var, xi, ensembles = False):
                         x_b_mix[ln_var] = log(x_b)
                         x_b_mix[rl_var] = log(xi - x_b)
     - `ln_var`    ->  State variables that should be treated lognormally, 
-                    as a list of indices between 0 and n_SV-1.
-                    If a lognormal state variable had a negative value, this state variable
-                    is instead treated as Gaussian, and the index is removed from ln_var
+                        as a list of indices between 0 and n_SV-1.
+                        If a lognormal state variable had a negative value, this state variable
+                        is instead treated as Gaussian, and the index is removed from ln_var
     - `rl_var`    ->  State variables that should be treated reverse lognormally, 
-                    as a list of indices between 0 and n_SV-1.
-                    If a reverse lognormal state variable had a value larger than xi, this state variable
-                    is instead treated as Gaussian, and the index is removed from rl_var
+                        as a list of indices between 0 and n_SV-1.
+                        If a reverse lognormal state variable had a value larger than xi, 
+                        this state variable is instead treated as Gaussian, 
+                        and the index is removed from rl_var
     """
 
     # Initialize mixed variables
@@ -449,6 +451,47 @@ def rmse(SV_true,SV_DA,period_DA = 1):
     """
 
     return np.sqrt(np.nanmean((SV_true[:,::period_DA] - SV_DA)**2))
+
+
+def mae(SV_true,SV_DA,period_DA = 1):
+    """
+    Calculate the mean absolute error of the analysis with respect to the true state
+
+    #### Input
+      - `SV_true`   ->  State variables of truth, array of size n_SV x n_t,
+                        with n_SV the number of variables, and n_t the number of time steps
+      - `SV_DA`     ->  State variables of analysis from DA, array of size n_SV x n_t_DA,
+                        with n_SV the number of variables, and n_t_a the number of time steps
+    - `period_DA`   ->  Analysis period, in steps of true time, such that
+                            n_t = n_t_DA * period_DA
+                        Default = 1, such that n_t = n_t_DA
+
+    #### Output
+      - `RMSE`      ->  Mean absolute error of all state variables over the entire time period
+    """
+
+    return np.nanmean(np.abs((SV_true[:,::period_DA] - SV_DA)))
+    
+    
+def medae(SV_true,SV_DA,period_DA = 1):
+    """
+    Calculate the median absolute error of the analysis with respect to the true state
+
+    #### Input
+      - `SV_true`   ->  State variables of truth, array of size n_SV x n_t,
+                        with n_SV the number of variables, and n_t the number of time steps
+      - `SV_DA`     ->  State variables of analysis from DA, array of size n_SV x n_t_DA,
+                        with n_SV the number of variables, and n_t_a the number of time steps
+    - `period_DA`   ->  Analysis period, in steps of true time, such that
+                            n_t = n_t_DA * period_DA
+                        Default = 1, such that n_t = n_t_DA
+
+    #### Output
+      - `RMSE`      ->  Median absolute error of all state variables over the entire time period
+    """
+
+    return np.nanmedian(np.abs((SV_true[:,::period_DA] - SV_DA)))
+
     
 def rmse_time(SV_true, SV_DA, period_DA = 1, ln_vars = [], rl_vars = [], xi = 0.0):
     """
