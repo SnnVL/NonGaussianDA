@@ -21,18 +21,21 @@ import mod_DA_general as da
 
 
 # Options for DA run
-da_method = 'KF'                            # DA method, either '3DVAR', 'KF', or 'MLEF'
+da_method = '3DVAR'                            # DA method, either '3DVAR', 'KF', or 'MLEF'
 n_runs = 50                                 # Number of DA runs
 n_wind = 250                                # Number of DA windows for each run
-period_obs = 60                             # Observation period, in number of time steps
 obs_vars = 'xyz'                            # Observed variables, either 'xy', or 'xyz'
-var_obs = 2.0                               # Variance of the observations
 n_e = 3                                     # Number of ensemble members (only for MLEF)
 ml_method = 'array'                         # Nongaussian decision function, either  
                                             #   'array',    selection based on observations before DA run
                                             #   'function', selection from decision function every DA window
+w = 12
+s_cutoff = 1.2
 seed = None                                 # Seed for random number generator, can be set to None
 SV_init = [-5.0,-6.0,22.0]                  # Initial values of the Lorenz-63 run
+descriptor = 'median'                       # Descriptor to optimize 3DVAR, 
+                                            # either 'mode', 'mean', or 'median'
+
 
 ###########################################################################################
 ###########################################################################################
@@ -49,6 +52,7 @@ def one_run(jj):
     global ml_file
     global seed
     global SV_init
+    global descriptor
 
     # Load the machine learning model
     with open(ml_file,'rb') as f:
@@ -222,7 +226,6 @@ def one_run(jj):
         if da_method == '3DVAR':
 
             varmeth = 'min'             # Method for minimizing, either 'min', or 'root'
-            descriptor = 'median'         # Descriptor to optimize, either 'mode', 'mean', or 'median'
             if descriptor == 'mode':
                 l_SV, l_obs = 1.0, 1.0
             elif descriptor == 'mean':
@@ -329,21 +332,20 @@ from multiprocessing import Pool
 if __name__ == '__main__':
 
     n_meths = 7
-    w_vec = np.arange(4,18,2)
-    s_vec = np.arange(0.8,2.4,0.2)
+    ml_file_str =  'w'+str(w)+'_s'+str(np.round(s_cutoff,2))
+    ml_file = './data/kNN_l63_'+ml_file_str+'.pkl'    # Location of the trained ML model
+    po_vec = np.arange(20,220,20)
+    vo_vec = np.arange(0.5,5.0,0.5)  
 
-    RMSE_A = np.empty((w_vec.size,s_vec.size,n_runs,n_meths))
-    RMSE_B = np.empty((w_vec.size,s_vec.size,n_runs,n_meths))
-    MAE_A = np.empty((w_vec.size,s_vec.size,n_runs,n_meths))
-    MAE_B = np.empty((w_vec.size,s_vec.size,n_runs,n_meths))
-    MeAE_A = np.empty((w_vec.size,s_vec.size,n_runs,n_meths))
-    MeAE_B = np.empty((w_vec.size,s_vec.size,n_runs,n_meths))
+    RMSE_A = np.empty((po_vec.size,vo_vec.size,n_runs,n_meths))
+    RMSE_B = np.empty((po_vec.size,vo_vec.size,n_runs,n_meths))
+    MAE_A = np.empty((po_vec.size,vo_vec.size,n_runs,n_meths))
+    MAE_B = np.empty((po_vec.size,vo_vec.size,n_runs,n_meths))
+    MeAE_A = np.empty((po_vec.size,vo_vec.size,n_runs,n_meths))
+    MeAE_B = np.empty((po_vec.size,vo_vec.size,n_runs,n_meths))
 
-    for ii, w in enumerate(w_vec):
-        for jj, s_cutoff in enumerate(s_vec):
-
-            ml_file_str =  'w'+str(w)+'_s'+str(np.round(s_cutoff,2))
-            ml_file = './data/kNN_l63_'+ml_file_str+'.pkl'    # Location of the trained ML model
+    for ii, period_obs in enumerate(po_vec):
+        for jj, var_obs in enumerate(vo_vec):
 
             with Pool(np.min([n_runs,5])) as p:
                 X = p.map(one_run, range(n_runs))
@@ -353,26 +355,27 @@ if __name__ == '__main__':
                 MAE_A[ii,jj,kk,:], MAE_B[ii,jj,kk,:], \
                 MeAE_A[ii,jj,kk,:], MeAE_B[ii,jj,kk,:] = X[kk]
 
-            print("Finished "+ml_file_str)
+            print("Finished p = "+str(period_obs)+", s = "+str(var_obs))
 
     info = {
         "da_method": da_method,
         "n_runs": n_runs,
         "n_wind": n_wind,
-        "period_obs": period_obs,
+        "period_obs": po_vec,
         "obs_vars": obs_vars,
-        "var_obs": var_obs,
+        "var_obs": vo_vec,
         "n_e": n_e,
         "ml_method": ml_method,
         "seed": seed,
         "SV_init": SV_init,
-        "w_vec": w_vec,
-        "s_vec": s_vec
+        "w": w,
+        "s": s_cutoff
     }
     with open('./data/ngDA_L63_' \
         +da_method+"_" \
-        +obs_vars+"_p" \
-        +str(period_obs) \
+        +obs_vars+"_" \
+        +ml_file_str+"_" \
+        +descriptor \
         +'.pkl','wb') as f:
         pickle.dump(RMSE_A, f)
         pickle.dump(RMSE_B, f)
