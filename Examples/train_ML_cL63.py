@@ -12,7 +12,8 @@ import time
 # Lorenz-63
 import sys
 sys.path.append("../Models/")
-import mod_coupledLorenz as L63
+# import mod_coupledLorenz as L63
+from LorenzModels import sol_cL63
 
 # ML modules
 from sklearn.model_selection import train_test_split
@@ -35,15 +36,15 @@ for ii in range(n):
     SV_init[3*ii:3*ii+3] = SV_init_0 + rng.normal(loc = 0.0, scale = 3.0, size = (3))
 
 # Generate data
+c_all = 0.1
 p = np.array([10.0,28.0,8.0/3.0])   # Parameters of Lorenz-63
-c = np.array([1.0,1.0,1.0])         # Parameters of Lorenz-63
+c = np.array([c_all,c_all,c_all])         # Parameters of Lorenz-63
 t_span = [0.0,1000.0]                # Time span
 dt = 0.01                           # Time step
 t_eval = np.arange(t_span[0],t_span[1],dt)
 
 # Solve Lorenz model
-integrationMethod = 'RK45'
-t, SV = L63.sol_l63_n(t_span,SV_init,p,c,n,t_eval,meth=integrationMethod)
+SV = sol_cL63(t_eval,SV_init,p=p,c=c,n=n)
 
 # Calculate z-score of skewtest
 z = SV[2,:]
@@ -59,8 +60,8 @@ y_data[s >= s_cutoff] =  1
 y_data[s <=-s_cutoff] = -1 
 
 # Remove data points for spinup
-X_data = X_data[50:-50,:]
-y_data = y_data[50:-50]
+X_data = X_data[100:-50,:]
+y_data = y_data[100:-50]
 
 # Split data: 70% train, 30% test
 X_train, X_test, y_train, y_test = train_test_split(X_data, y_data, test_size=0.3, random_state=42)
@@ -90,13 +91,12 @@ info = {
     "t_span": t_span,
     "dt": dt,
     "Classifier": "KNeighborsClassifier",
-    "integrationMethod": integrationMethod,
     "accuracy": acc_score,
     "s_cutoff":s_cutoff
 }
 
 # Save model and scaler to file
-fName = 'kNN_cl63_n' + str(n) + '.pkl'
+fName = 'kNN_cl63_n' + str(n) + '_c' + str(c_all) + '.pkl'
 with open('./data/'+fName,'wb') as f:
     pickle.dump(clf, f)
     pickle.dump(scaler, f)

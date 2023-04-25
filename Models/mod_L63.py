@@ -236,10 +236,11 @@ def model_l63_tlm(t, x0):
 #######################    Data assimilation specific functions     #######################
 ###########################################################################################
 
-def create_B_init( \
+def create_B_init(case, \
         SV_init = np.array([-10.0,-10.0,20.0]), \
         p = np.array([10.0,28.0,8.0/3.0]), \
-        meth = 'RK45'):
+        meth = 'RK45', \
+        seed = None, ln_vars=[], rl_vars=[]):
     """
     Create the initial guess for the background error covariance matrix for the Lorenz 63 model. 
 
@@ -252,16 +253,101 @@ def create_B_init( \
     - `B`       ->  Background error covariance matrix
     """
 
-    # Create time values for evaluation
-    total_steps = 2000
-    dt = 0.01
-    t_span = [0.0,dt*total_steps]
-    t_eval = np.arange(t_span[0],t_span[1],dt)
+    if case == 'rand':
+        n_SV = 3
+        rng = np.random.default_rng(seed)
+        e_b = rng.standard_normal((n_SV))
+        B = np.outer(e_b,e_b)
 
-    # Solve Lorenz model
-    _, SV = sol_l63(t_span,SV_init,p,t_eval,meth)
+    elif case == 'nmc':
+        # Create time values for evaluation
+        total_steps = 1000
+        dt = 0.01
+        t_span = [0.0,dt*total_steps]
+        t_eval = np.arange(t_span[0],t_span[1],dt)
 
-    # Calculate the background error covariance matrix 
-    B = getBsimple(SV)
+        rng = np.random.default_rng(seed)
+
+        # Solve Lorenz model
+        _, SV_1 = sol_l63(t_span,SV_init + rng.standard_normal(3),p,t_eval,meth)
+        _, SV_2 = sol_l63(t_span,SV_init + rng.standard_normal(3),p,t_eval,meth)
+
+        # Matrix with trajectory values for Gaussian covariance
+        X = SV_1 - SV_2
+
+        # Use logaritmic variables for lognormally distributed state variables
+        if ln_vars:
+            X[ln_vars, :] = np.log(SV_1[ln_vars, :]) - np.log(SV_2[ln_vars, :])
+
+
+        # Use reverse logaritmic variables for reverse lognormally distributed state variables
+        if rl_vars:
+            xi1 = np.nanmax(SV_1[2,:])+1.0      # Parameter of the reverse lognormal distribution
+            xi2 = np.nanmax(SV_2[2,:])+1.0      # Parameter of the reverse lognormal distribution
+            xi = np.max((xi1,xi2))
+            X[rl_vars, :] = np.log(xi - SV_1[rl_vars, :]) - np.log(xi - SV_2[rl_vars, :])
+
+        # Updated background error covariance matrix
+        B = (X @ X.T)/t_eval.size
+
+    elif case == 'simple':
+    
+        # Create time values for evaluation
+        total_steps = 2000
+        dt = 0.01
+        t_span = [0.0,dt*total_steps]
+        t_eval = np.arange(t_span[0],t_span[1],dt)
+
+        # Solve Lorenz model
+        _, SV = sol_l63(t_span,SV_init,p,t_eval,meth)
+
+        # Calculate the background error covariance matrix 
+        B = getBsimple(SV)
+
+    else:
+        raise RuntimeError("Initial B-matrix case unknown.")
+         
 
     return B
+
+
+def create_sqrtPa_init(case, \
+        n_SV, n_e, \
+        sigma_a = 1.0, \
+        seed = None, ln_vars=[], rl_vars=[]):
+    """
+    Create the initial guess for the square root of the analysis error covariance matrix 
+    for the Lorenz 63 model. 
+
+    #### Required input
+    - `case`    ->  Method to generate B-matrix with, either 'rand' or 'nmc'
+    - `n_SV`    ->  Number of state variables
+    - `n_e`     ->  Number of ensembles
+
+    #### Optional input
+    - `sigma_a` ->  Standard deviation of random perturbations
+    - `SV_init` ->  Initial value for all state variables, array of size n_SV
+    - `p`       ->  Parameters of the Lorenz model, [sigma, rho, beta]
+    - `meth`    ->  String indicating the integration method to use
+    - `seed`    ->  Seed of the random number generator. Default is random seed
+    - `ln_var`  ->  State variables that should be treated lognormally, 
+                        as a list of indices between 0 and n_SV-1
+    - `rl_var`  ->  State variables that should be treated reverse lognormally, 
+                        as a list of indices between 0 and n_SV-1
+
+    #### Output
+    - `sqrtP_a` ->  square root of the analysis error covariance matrix
+    """
+
+    if case == 'random':
+        rng = np.random.default_rng(seed)
+        sqrtP_a = rng.normal(0,sigma_a, size = (n_SV,n_e))
+
+    elif case == 'lagged':
+        rng = np.random.default_rng(seed)
+        sqrtP_a = rng.normal(0,1.0, size = (n_SV,n_e))
+
+    else:
+        raise RuntimeError("Initial B-matrix case unknown.")
+
+    return sqrtP_a
