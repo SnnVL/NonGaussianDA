@@ -1,6 +1,7 @@
 # NonGaussianDA
 
 Python scripts for general nongaussian data assimilation, with examples for simple model systems.
+Code is in development and might not be complete or the most up to date. Check individual references for additional resources or [contact me](mailto:Senne.Van_Loon@colostate.edu).
 
 ## Structure
 
